@@ -1645,7 +1645,7 @@ calTable.<span class="fn">querySelectorAll</span>(<span class="str">'td:not(.emp
       <div>
         <div class="screenshot-zone" style="height:100%">
           <img src="Imag/screen cal .png" alt="EventController.php" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">
-          <div class="sz-label">Vue calendrier + panel jour</div>
+          <div class="sz-label">View calendrier + panel jour</div>
         </div>
       </div>
     </div>
@@ -2041,6 +2041,20 @@ calTable.<span class="fn">querySelectorAll</span>(<span class="str">'td:not(.emp
   document.getElementById('deck').addEventListener('touchend',   e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) > 50) changeSlide(dx < 0 ? 1 : -1);
+  });
+
+  // Make all images fullscreen on click
+  document.querySelectorAll('img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', function () {
+      if (img.requestFullscreen) {
+        img.requestFullscreen();
+      } else if (img.webkitRequestFullscreen) {
+        img.webkitRequestFullscreen();
+      } else if (img.msRequestFullscreen) {
+        img.msRequestFullscreen();
+      }
+    });
   });
 
   // Init progress bar
