@@ -389,16 +389,12 @@
 
     <div id="logo-eni-overlay">
       <img id="logo-eni-img" src="" alt="Logo ENI" onclick="document.getElementById('logo-eni-input').click()">
-      <img id="logo-eni-img" src="eni.png" alt="Logo ENI" style="display:block;" onclick="document.getElementById('logo-eni-input').click()">
-      <span id="logo-eni-placeholder" onclick="document.getElementById('logo-eni-input').click()" style="display:none;">+ Logo ENI</span>
-      <input id="logo-eni-input" type="file" accept="image/*" onchange="loadLogoEni(this)">
+      <img id="logo-eni-img" src="eni.png" alt="Logo ENI" style="display:block;">
     </div>
 
     <div id="logo-overlay">
       <img id="logo-img" src="" alt="Logo" onclick="document.getElementById('logo-input').click()">
-      <img id="logo-img" src="logo_carre_transp.png" alt="Logo entreprise" style="display:block;" onclick="document.getElementById('logo-input').click()">
-      <span id="logo-placeholder" onclick="document.getElementById('logo-input').click()" style="display:none;">+ Logo entreprise</span>
-      <input id="logo-input" type="file" accept="image/*" onchange="loadLogo(this)">
+      <img id="logo-img" src="logo_carre_transp.png" alt="Logo entreprise" style="display:block;">
     </div>
 
   </div>
@@ -1992,169 +1988,6 @@ calTable.<span class="fn">querySelectorAll</span>(<span class="str">'td:not(.emp
 </div>
 
 <script>
-  function openLightbox(src, isVideo) {
-    const lb = document.getElementById('lightbox');
-    lb.querySelectorAll('img,video').forEach(e => e.remove());
-    if (isVideo) {
-      const v = document.createElement('video');
-      v.src = src; v.controls = true; v.autoplay = true;
-      v.style.cssText = 'max-width:95vw;max-height:95vh;border-radius:8px;';
-      lb.appendChild(v);
-    } else {
-      const img = document.createElement('img');
-      img.src = src;
-      lb.appendChild(img);
-    }
-    lb.classList.add('open');
-  }
-  function closeLightbox() {
-    const lb = document.getElementById('lightbox');
-    lb.classList.remove('open');
-    lb.querySelectorAll('img,video').forEach(e => e.remove());
-  }
-  document.getElementById('lightbox').addEventListener('click', function(e) {
-    if (e.target === this) closeLightbox();
-  });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-  // ── LOGO ENTREPRISE (haut droit) ──
-  function loadLogo(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const b64 = e.target.result;
-      localStorage.setItem('deck-logo', b64);
-      applyLogo(b64);
-    };
-    reader.readAsDataURL(file);
-  }
-  function applyLogo(src) {
-    const img = document.getElementById('logo-img');
-    const overlay = document.getElementById('logo-overlay');
-    img.src = src;
-    overlay.classList.add('has-logo');
-  }
-  const savedLogo = localStorage.getItem('deck-logo');
-  if (savedLogo) applyLogo(savedLogo);
-
-  // ── LOGO ENI (haut gauche) ──
-  function loadLogoEni(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const b64 = e.target.result;
-      localStorage.setItem('deck-logo-eni', b64);
-      applyLogoEni(b64);
-    };
-    reader.readAsDataURL(file);
-  }
-  function applyLogoEni(src) {
-    const img = document.getElementById('logo-eni-img');
-    const overlay = document.getElementById('logo-eni-overlay');
-    img.src = src;
-    overlay.classList.add('has-logo');
-  }
-  const savedLogoEni = localStorage.getItem('deck-logo-eni');
-  if (savedLogoEni) applyLogoEni(savedLogoEni);
-
-  // ── IndexedDB for large files (videos) ──────────────────
-  let idb;
-  const IDB_NAME = 'deck-media', IDB_STORE = 'zones', IDB_VER = 1;
-  function openIDB() {
-    return new Promise((res, rej) => {
-      if (idb) return res(idb);
-      const req = indexedDB.open(IDB_NAME, IDB_VER);
-      req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
-      req.onsuccess = e => { idb = e.target.result; res(idb); };
-      req.onerror   = e => rej(e);
-    });
-  }
-  function idbSet(key, val) {
-    return openIDB().then(db => new Promise((res, rej) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).put(val, key);
-      tx.oncomplete = res; tx.onerror = rej;
-    }));
-  }
-  function idbGet(key) {
-    return openIDB().then(db => new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = rej;
-    }));
-  }
-
-  function loadImg(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const zone = input.closest('.screenshot-zone');
-    const zones = Array.from(document.querySelectorAll('.screenshot-zone'));
-    const idx = zones.indexOf(zone);
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const dataUrl = e.target.result;
-      if (file.type.startsWith('video/')) {
-        // Store large files in IndexedDB
-        idbSet('sz_' + idx, dataUrl).catch(() => {});
-        // Remove from localStorage in case old small entry exists
-        localStorage.removeItem('sz_' + idx);
-      } else {
-        try { localStorage.setItem('sz_' + idx, dataUrl); } catch(e) {
-          // localStorage full - fallback to IndexedDB
-          idbSet('sz_' + idx, dataUrl).catch(() => {});
-        }
-      }
-      applyMedia(zone, dataUrl, file.type);
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
-  }
-
-  function applyMedia(zone, dataUrl, type) {
-    zone.querySelectorAll('img,video').forEach(el => el.remove());
-    const isVideo = type && type.startsWith('video/');
-    if (isVideo) {
-      const v = document.createElement('video');
-      v.src = dataUrl; v.autoplay = true; v.loop = true; v.muted = true; v.controls = true;
-      v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:8px;background:#000;z-index:1;';
-      zone.appendChild(v);
-    } else {
-      const img = document.createElement('img');
-      img.src = dataUrl;
-      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:8px;background:#1a1a2e;';
-      zone.appendChild(img);
-    }
-    zone.classList.add('loaded');
-    // For images: add fullscreen button. For videos: native controls handle fullscreen.
-    zone.querySelectorAll('.sz-fullscreen-btn').forEach(b => b.remove());
-    if (!isVideo) {
-      const btn = document.createElement('button');
-      btn.className = 'sz-fullscreen-btn';
-      btn.textContent = '⛶';
-      btn.title = 'Plein écran';
-      btn.onclick = (e) => { e.stopPropagation(); openLightbox(dataUrl, false); };
-      zone.appendChild(btn);
-    }
-    zone.ondblclick = null;
-    // Keep the file input so media can always be replaced (e.g., video -> image).
-    // Lock: remove file input after first upload
-    if (zone.hasAttribute('data-lock')) {
-      const inp = zone.querySelector('input[type="file"]');
-      if (inp) inp.remove();
-    }
-  }
-
-  async function restoreImages() {
-    const zones = document.querySelectorAll('.screenshot-zone');
-    for (let idx = 0; idx < zones.length; idx++) {
-      // Try localStorage first (images), then IndexedDB (videos)
-      let dataUrl = localStorage.getItem('sz_' + idx);
-      if (!dataUrl) dataUrl = await idbGet('sz_' + idx).catch(() => null);
-      if (dataUrl) applyMedia(zones[idx], dataUrl, dataUrl.startsWith('data:video') ? 'video/' : 'image/');
-    }
-  }
-  restoreImages();
 
   const slides= document.querySelectorAll('.slide');
   const total  = slides.length;
